@@ -47,117 +47,144 @@ function EventDetail({ hotspot, onClose }) {
 
   const risk = getRiskScore(hotspot.frp)
   const classData = classifications[hotspot.type] || classifications['Low Risk']
+  const color = getColor(hotspot.type)
 
   return (
     <div style={{
       position: 'absolute',
       bottom: '20px',
       left: '20px',
-      width: '280px',
+      width: '290px',
       background: '#0f1623',
-      border: '1px solid #1e2d3d',
-      borderRadius: '10px',
-      padding: '16px',
+      border: `1px solid ${color}30`,
+      borderRadius: '16px',
+      padding: '18px',
       zIndex: 1000,
-      fontFamily: 'monospace',
+      fontFamily: "'Inter', sans-serif",
       color: 'white',
+      boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${color}15`,
     }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#4a6080', letterSpacing: '1px', marginBottom: '4px' }}>
-            SELECTED EVENT
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            background: `${color}18`, border: `1px solid ${color}30`,
+            borderRadius: '20px', padding: '2px 8px', marginBottom: '8px'
+          }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: color }} />
+            <span style={{ fontSize: '9px', color: color, fontWeight: '600', letterSpacing: '0.5px' }}>
+              {hotspot.type.toUpperCase()}
+            </span>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '700', color: getColor(hotspot.type) }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#f1f5f9', letterSpacing: '-0.3px' }}>
             {hotspot.city}
           </div>
-          <div style={{ fontSize: '10px', color: '#4a6080', marginTop: '2px' }}>
+          <div style={{ fontSize: '10px', color: '#4a6080', marginTop: '3px' }}>
             {hotspot.lat}, {hotspot.lng}
           </div>
         </div>
         <button
           onClick={onClose}
           style={{
-            background: '#1e2d3d',
-            border: 'none',
-            color: '#94a3b8',
+            background: '#1a2535',
+            border: '1px solid #1e2d3d',
+            color: '#64748b',
             cursor: 'pointer',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            fontSize: '12px'
+            borderRadius: '8px',
+            padding: '5px 9px',
+            fontSize: '12px',
+            lineHeight: 1,
+            transition: 'all 0.15s',
           }}
         >✕</button>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '16px' }}>
         {[
           { label: 'FRP', value: `${hotspot.frp}`, unit: 'MW' },
           { label: 'Confidence', value: hotspot.confidence === 'high' ? '92%' : hotspot.confidence === 'nominal' ? '65%' : '38%', unit: '' },
           { label: 'Source', value: 'VIIRS', unit: '' },
         ].map(s => (
           <div key={s.label} style={{
-            background: '#131f2e',
-            borderRadius: '6px',
-            padding: '8px',
-            textAlign: 'center'
+            background: '#1a2535',
+            borderRadius: '10px',
+            padding: '10px 8px',
+            textAlign: 'center',
+            border: '1px solid #1e2d3d',
           }}>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>{s.value}</div>
-            {s.unit && <div style={{ fontSize: '9px', color: '#4a6080' }}>{s.unit}</div>}
+            <div style={{ fontSize: '15px', fontWeight: '700', color: '#f1f5f9' }}>{s.value}</div>
+            {s.unit && <div style={{ fontSize: '9px', color: '#4a6080', marginTop: '1px' }}>{s.unit}</div>}
             <div style={{ fontSize: '9px', color: '#4a6080', marginTop: '2px' }}>{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Divider */}
+      <div style={{ height: '1px', background: '#1e2d3d', marginBottom: '14px' }} />
+
       {/* Classification Breakdown */}
       <div style={{ marginBottom: '14px' }}>
-        <div style={{ fontSize: '9px', color: '#4a6080', letterSpacing: '1px', marginBottom: '8px' }}>
-          SOURCE CLASSIFICATION
+        <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', marginBottom: '10px' }}>
+          Source Classification
         </div>
         {classData.map(c => (
-          <div key={c.label} style={{ marginBottom: '6px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-              <span style={{ fontSize: '10px', color: '#94a3b8' }}>{c.label}</span>
-              <span style={{ fontSize: '10px', color: c.color, fontWeight: '600' }}>{c.value}%</span>
+          <div key={c.label} style={{ marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>{c.label}</span>
+              <span style={{ fontSize: '11px', color: c.color, fontWeight: '600' }}>{c.value}%</span>
             </div>
-            <div style={{ background: '#1e2d3d', borderRadius: '2px', height: '4px' }}>
+            <div style={{ background: '#1a2535', borderRadius: '10px', height: '5px' }}>
               <div style={{
                 width: `${c.value}%`,
                 height: '100%',
                 background: c.color,
-                borderRadius: '2px',
-                transition: 'width 0.5s ease'
+                borderRadius: '10px',
+                transition: 'width 0.5s ease',
+                opacity: 0.85,
               }}/>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Divider */}
+      <div style={{ height: '1px', background: '#1e2d3d', marginBottom: '14px' }} />
+
       {/* Risk Score */}
       <div style={{
-        background: '#131f2e',
-        borderRadius: '6px',
-        padding: '10px 12px',
+        background: '#1a2535',
+        borderRadius: '12px',
+        padding: '12px 14px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '12px'
+        marginBottom: '14px',
+        border: '1px solid #1e2d3d',
       }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#4a6080', marginBottom: '2px' }}>RISK SCORE</div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: getColor(hotspot.type) }}>
-            {risk.score}<span style={{ fontSize: '12px', color: '#4a6080' }}>/100</span>
+          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Risk Score</div>
+          <div style={{ fontSize: '26px', fontWeight: '700', color, lineHeight: 1 }}>
+            {risk.score}<span style={{ fontSize: '13px', color: '#4a6080', fontWeight: '400' }}>/100</span>
           </div>
-          <div style={{ fontSize: '9px', color: getColor(hotspot.type) }}>{risk.label}</div>
+          <div style={{
+            fontSize: '10px', color, fontWeight: '600', marginTop: '3px',
+            background: `${color}18`, display: 'inline-block',
+            padding: '1px 7px', borderRadius: '10px', border: `1px solid ${color}25`
+          }}>
+            {risk.label}
+          </div>
         </div>
         <div style={{
-          width: '50px', height: '50px',
+          width: '52px', height: '52px',
           borderRadius: '50%',
-          border: `3px solid ${getColor(hotspot.type)}`,
+          border: `2.5px solid ${color}`,
+          background: `${color}12`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '18px', fontWeight: '700',
-          color: getColor(hotspot.type)
+          fontSize: '17px', fontWeight: '700',
+          color,
         }}>
           {risk.score}
         </div>
@@ -166,17 +193,18 @@ function EventDetail({ hotspot, onClose }) {
       {/* Generate Report Button */}
       <button style={{
         width: '100%',
-        padding: '10px',
-        background: getColor(hotspot.type),
-        border: 'none',
-        borderRadius: '6px',
-        color: '#000',
+        padding: '11px',
+        background: `${color}18`,
+        border: `1px solid ${color}40`,
+        borderRadius: '10px',
+        color,
         fontWeight: '700',
         fontSize: '11px',
         cursor: 'pointer',
-        letterSpacing: '1px'
+        letterSpacing: '0.5px',
+        transition: 'all 0.15s',
       }}>
-        📄 GENERATE REPORT
+        📄 Generate Report
       </button>
 
     </div>

@@ -19,41 +19,58 @@ const getRiskLabel = (type) => {
 }
 
 function HotspotCard({ hotspot, isSelected, onClick }) {
+  const color = getColor(hotspot.type)
+
   return (
     <div
       onClick={() => onClick(hotspot)}
       style={{
         background: isSelected ? '#1a2a3e' : '#131f2e',
-        borderRadius: '6px',
-        padding: '12px',
-        borderLeft: `3px solid ${getColor(hotspot.type)}`,
+        borderRadius: '12px',
+        padding: '13px 14px',
+        border: `1px solid ${isSelected ? color + '50' : '#1e2d3d'}`,
+        borderLeft: `3px solid ${color}`,
         cursor: 'pointer',
         transition: 'all 0.15s',
-        outline: isSelected ? `1px solid ${getColor(hotspot.type)}44` : 'none',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = '#1a2a3e'}
-      onMouseLeave={e => e.currentTarget.style.background = isSelected ? '#1a2a3e' : '#131f2e'}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = '#1a2a3e'
+        e.currentTarget.style.borderColor = color + '40'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = isSelected ? '#1a2a3e' : '#131f2e'
+        e.currentTarget.style.borderColor = isSelected ? color + '50' : '#1e2d3d'
+      }}
     >
+      {/* Top row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-        <span style={{ fontWeight: '600', fontSize: '13px', color: 'white' }}>{hotspot.city}</span>
+        <span style={{ fontWeight: '700', fontSize: '13px', color: '#f1f5f9' }}>{hotspot.city}</span>
         <span style={{
           fontSize: '9px',
-          padding: '2px 7px',
-          borderRadius: '3px',
-          background: `${getColor(hotspot.type)}22`,
-          color: getColor(hotspot.type),
-          letterSpacing: '0.8px',
-          fontWeight: '600'
+          padding: '3px 8px',
+          borderRadius: '20px',
+          background: `${color}18`,
+          border: `1px solid ${color}30`,
+          color: color,
+          letterSpacing: '0.5px',
+          fontWeight: '600',
         }}>
           {getRiskLabel(hotspot.type)}
         </span>
       </div>
 
-      <div style={{ fontSize: '11px', color: getColor(hotspot.type), marginBottom: '8px', fontWeight: '500' }}>
+      {/* Type */}
+      <div style={{ fontSize: '11px', color: color, marginBottom: '10px', fontWeight: '500', opacity: 0.85 }}>
         {hotspot.type}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px' }}>
+      {/* Data grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px',
+        background: '#0f1623',
+        borderRadius: '8px',
+        padding: '8px 10px',
+      }}>
         {[
           { label: 'FRP', value: `${hotspot.frp} MW` },
           { label: 'Conf', value: hotspot.confidence },
