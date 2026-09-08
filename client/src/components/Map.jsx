@@ -1,29 +1,42 @@
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-import { useEffect } from 'react'
-import L from 'leaflet'
-import { mapHotspots as hotspots } from '../data/hotspots'
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  useMap,
+  GeoJSON,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { useEffect } from "react";
+import L from "leaflet";
+import { mapHotspots as hotspots } from "../data/hotspots";
+import { industrialZones } from "../data/industrialZones";
 
 const getColor = (type) => {
-  switch(type) {
-    case 'Wildfire': return '#ef4444'
-    case 'Industrial Fire': return '#f97316'
-    case 'Persistent Thermal Source': return '#eab308'
-    case 'Low Risk': return '#22c55e'
-    default: return '#888'
+  switch (type) {
+    case "Wildfire":
+      return "#ef4444";
+    case "Industrial Fire":
+      return "#f97316";
+    case "Persistent Thermal Source":
+      return "#eab308";
+    case "Low Risk":
+      return "#22c55e";
+    default:
+      return "#888";
   }
-}
+};
 
 function PulseLayer() {
-  const map = useMap()
+  const map = useMap();
 
   useEffect(() => {
-    const markers = []
+    const markers = [];
 
     hotspots.forEach((h) => {
       if (h.frp > 100) {
         const pulseIcon = L.divIcon({
-          className: '',
+          className: "",
           html: `
             <div style="position: relative; width: 20px; height: 20px;">
               <div style="
@@ -44,38 +57,38 @@ function PulseLayer() {
             </div>
           `,
           iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        })
+          iconAnchor: [10, 10],
+        });
 
-        const marker = L.marker([h.lat, h.lng], { icon: pulseIcon })
-        marker.addTo(map)
-        markers.push(marker)
+        const marker = L.marker([h.lat, h.lng], { icon: pulseIcon });
+        marker.addTo(map);
+        markers.push(marker);
       }
-    })
+    });
 
-    return () => markers.forEach(m => map.removeLayer(m))
-  }, [map])
+    return () => markers.forEach((m) => map.removeLayer(m));
+  }, [map]);
 
-  return null
+  return null;
 }
 
 function ZoomToSelected({ selectedHotspot }) {
-  const map = useMap()
+  const map = useMap();
 
   useEffect(() => {
     if (selectedHotspot) {
       // hotspots array se actual lat/lng lenge string se nahi
-      const h = hotspots.find(h => h.id === selectedHotspot.id)
+      const h = hotspots.find((h) => h.id === selectedHotspot.id);
       if (h) {
         map.flyTo([h.lat, h.lng], 8, {
           animate: true,
-          duration: 1.2
-        })
+          duration: 1.2,
+        });
       }
     }
-  }, [selectedHotspot, map])
+  }, [selectedHotspot, map]);
 
-  return null
+  return null;
 }
 
 function Map({ selectedHotspot }) {
@@ -83,17 +96,17 @@ function Map({ selectedHotspot }) {
     <MapContainer
       center={[22.5, 82.0]}
       zoom={5}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: "100%", width: "100%" }}
       zoomControl={false}
       scrollWheelZoom={true}
     >
       <TileLayer
         url="https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg"
-        attribution='&copy; Stadia Maps'
+        attribution="&copy; Stadia Maps"
       />
       <TileLayer
         url="https://tiles.stadiamaps.com/tiles/stadia_osm_bright/{z}/{x}/{y}{r}.png"
-        attribution=''
+        attribution=""
         opacity={0.4}
       />
 
@@ -105,24 +118,44 @@ function Map({ selectedHotspot }) {
           key={h.id}
           center={[h.lat, h.lng]}
           radius={h.frp / 15}
-          color={selectedHotspot?.id === h.id ? '#ffffff' : getColor(h.type)}
+          color={selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)}
           fillColor={getColor(h.type)}
           fillOpacity={0.85}
           weight={selectedHotspot?.id === h.id ? 3 : 2}
         >
           <Popup>
-            <div style={{ fontFamily: 'monospace', minWidth: '160px' }}>
-              <b style={{ fontSize: '14px' }}>📍 {h.city}</b>
-              <hr style={{ border: '1px solid #333', margin: '6px 0' }}/>
-              <div>Type: <span style={{ color: getColor(h.type) }}>{h.type}</span></div>
-              <div>FRP: <b>{h.frp} MW</b></div>
+            <div style={{ fontFamily: "monospace", minWidth: "160px" }}>
+              <b style={{ fontSize: "14px" }}>📍 {h.city}</b>
+              <hr style={{ border: "1px solid #333", margin: "6px 0" }} />
+              <div>
+                Type: <span style={{ color: getColor(h.type) }}>{h.type}</span>
+              </div>
+              <div>
+                FRP: <b>{h.frp} MW</b>
+              </div>
               <div>Confidence: {h.confidence}</div>
             </div>
           </Popup>
         </CircleMarker>
       ))}
+      <GeoJSON
+        data={industrialZones}
+        style={{
+          color: "#00ff88",
+          weight: 2,
+          opacity: 1,
+          fillColor: "#00ff88",
+          fillOpacity: 0.04,
+        }}
+        onEachFeature={(feature, layer) => {
+          layer.bindTooltip(feature.properties.name, {
+            permanent: false,
+            className: "industrial-tooltip",
+          });
+        }}
+      />
     </MapContainer>
-  )
+  );
 }
 
-export default Map
+export default Map;
