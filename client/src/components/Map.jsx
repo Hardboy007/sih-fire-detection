@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import L from "leaflet";
 import { mapHotspots as hotspots } from "../data/hotspots";
 import { industrialZones } from "../data/industrialZones";
+import LayerPanel from "./LayerPanel";
+import { useState } from "react";
 
 const getColor = (type) => {
   switch (type) {
@@ -92,69 +94,109 @@ function ZoomToSelected({ selectedHotspot }) {
 }
 
 function Map({ selectedHotspot }) {
+  const [layers, setLayers] = useState([
+    {
+      id: "hotspots",
+      label: "Thermal Events",
+      icon: "🔥",
+      color: "#ef4444",
+      active: true,
+    },
+    {
+      id: "industrial",
+      label: "Industrial Zones",
+      icon: "🏭",
+      color: "#22c55e",
+      active: true,
+    },
+    {
+      id: "pipelines",
+      label: "Pipelines",
+      icon: "⚡",
+      color: "#38bdf8",
+      active: true,
+    },
+  ]);
+
+  const toggleLayer = (id) => {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, active: !l.active } : l)),
+    );
+  };
+
+  const isActive = (id) => layers.find((l) => l.id === id)?.active;
   return (
-    <MapContainer
-      center={[22.5, 82.0]}
-      zoom={5}
-      style={{ height: "100%", width: "100%" }}
-      zoomControl={false}
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        url="https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg"
-        attribution="&copy; Stadia Maps"
-      />
-      <TileLayer
-        url="https://tiles.stadiamaps.com/tiles/stadia_osm_bright/{z}/{x}/{y}{r}.png"
-        attribution=""
-        opacity={0.4}
-      />
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
+      <LayerPanel layers={layers} onLayerToggle={toggleLayer} />
+      <MapContainer
+        center={[22.5, 82.0]}
+        zoom={5}
+        style={{ height: "100%", width: "100%" }}
+        zoomControl={false}
+        scrollWheelZoom={true}
+      >
+        <TileLayer
+          url="https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg"
+          attribution="&copy; Stadia Maps"
+        />
+        <TileLayer
+          url="https://tiles.stadiamaps.com/tiles/stadia_osm_bright/{z}/{x}/{y}{r}.png"
+          attribution=""
+          opacity={0.4}
+        />
 
-      <PulseLayer />
-      <ZoomToSelected selectedHotspot={selectedHotspot} />
+        <PulseLayer />
+        <ZoomToSelected selectedHotspot={selectedHotspot} />
 
-      {hotspots.map((h) => (
-        <CircleMarker
-          key={h.id}
-          center={[h.lat, h.lng]}
-          radius={h.frp / 15}
-          color={selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)}
-          fillColor={getColor(h.type)}
-          fillOpacity={0.85}
-          weight={selectedHotspot?.id === h.id ? 3 : 2}
-        >
-          <Popup>
-            <div style={{ fontFamily: "monospace", minWidth: "160px" }}>
-              <b style={{ fontSize: "14px" }}>📍 {h.city}</b>
-              <hr style={{ border: "1px solid #333", margin: "6px 0" }} />
-              <div>
-                Type: <span style={{ color: getColor(h.type) }}>{h.type}</span>
-              </div>
-              <div>
-                FRP: <b>{h.frp} MW</b>
-              </div>
-              <div>Confidence: {h.confidence}</div>
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
-      <GeoJSON
-        data={industrialZones}
-        style={{
-          color: "#00ff88",
-          weight: 2,
-          opacity: 1,
-          fillColor: "#00ff88",
-          fillOpacity: 0.04,
-        }}
-        onEachFeature={(feature, layer) => {
-          layer.bindTooltip(feature.properties.name, {
-            permanent: false,
-            className: "industrial-tooltip",
-          });
-        }}
-      />
-    </MapContainer>
+        {isActive("hotspots") &&
+          hotspots.map((h) => (
+            <CircleMarker
+              key={h.id}
+              center={[h.lat, h.lng]}
+              radius={h.frp / 15}
+              color={
+                selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)
+              }
+              fillColor={getColor(h.type)}
+              fillOpacity={0.85}
+              weight={selectedHotspot?.id === h.id ? 3 : 2}
+            >
+              <Popup>
+                <div style={{ fontFamily: "monospace", minWidth: "160px" }}>
+                  <b style={{ fontSize: "14px" }}>📍 {h.city}</b>
+                  <hr style={{ border: "1px solid #333", margin: "6px 0" }} />
+                  <div>
+                    Type:{" "}
+                    <span style={{ color: getColor(h.type) }}>{h.type}</span>
+                  </div>
+                  <div>
+                    FRP: <b>{h.frp} MW</b>
+                  </div>
+                  <div>Confidence: {h.confidence}</div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+        {isActive("industrial") && (
+          <GeoJSON
+            data={industrialZones}
+            style={{
+              color: "#00ff88",
+              weight: 2,
+              opacity: 1,
+              fillColor: "#00ff88",
+              fillOpacity: 0.04,
+            }}
+            onEachFeature={(feature, layer) => {
+              layer.bindTooltip(feature.properties.name, {
+                permanent: false,
+                className: "industrial-tooltip",
+              });
+            }}
+          />
+        )}
+      </MapContainer>
+    </div>
   );
 }
 
