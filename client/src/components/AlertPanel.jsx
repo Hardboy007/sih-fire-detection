@@ -1,6 +1,5 @@
 import { useState } from "react";
 import HotspotCard from "./HotspotCard";
-import { hotspots } from "../data/hotspots";
 const filters = [
   "ALL",
   "Wildfire",
@@ -24,7 +23,31 @@ const getColor = (type) => {
   }
 };
 
-function AlertPanel({ onHotspotSelect, selectedHotspot }) {
+function AlertPanel({ onHotspotSelect, selectedHotspot, realHotspots }) {
+  const hotspots = realHotspots
+    ? realHotspots
+        .map((h, i) => ({
+          id: i,
+          lat: parseFloat(h.latitude),
+          lng: parseFloat(h.longitude),
+          frp: parseFloat(h.frp) || 0,
+          confidence: h.confidence,
+          type:
+            parseFloat(h.frp) > 100
+              ? "Wildfire"
+              : parseFloat(h.frp) > 50
+                ? "Industrial Fire"
+                : parseFloat(h.frp) > 20
+                  ? "Persistent Thermal Source"
+                  : "Low Risk",
+          city: h.cityName || `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
+          time: new Date().toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }))
+        .filter((h) => !isNaN(h.lat) && !isNaN(h.lng) && h.frp > 0)
+    : [];
   const [activeFilter, setActiveFilter] = useState("ALL");
 
   const filtered =

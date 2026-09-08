@@ -13,6 +13,9 @@ const hotspotRoutes = require("./routes/hotspots");
 
 app.use("/api/hotspots", hotspotRoutes);
 
+const industrialZoneRoutes = require("./routes/industrialZones");
+app.use("/api/industrial-zones", industrialZoneRoutes);
+
 app.get("/", (req, res) => {
     res.send("Fire Detection Server is Running!");
 });

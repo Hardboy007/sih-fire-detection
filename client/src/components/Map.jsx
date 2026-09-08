@@ -29,13 +29,13 @@ const getColor = (type) => {
   }
 };
 
-function PulseLayer() {
+function PulseLayer({ hotspots: data }) {
   const map = useMap();
 
   useEffect(() => {
     const markers = [];
 
-    hotspots.forEach((h) => {
+    data.forEach((h) => {
       if (h.frp > 100) {
         const pulseIcon = L.divIcon({
           className: "",
@@ -74,12 +74,12 @@ function PulseLayer() {
   return null;
 }
 
-function ZoomToSelected({ selectedHotspot }) {
+function ZoomToSelected({ selectedHotspot, hotspots: data }) {
   const map = useMap();
 
   useEffect(() => {
     if (selectedHotspot) {
-      const h = hotspots.find((h) => h.id === selectedHotspot.id);
+      const h = data.find((h) => h.id === selectedHotspot.id);
       if (h) {
         map.flyTo([h.lat, h.lng], 8, {
           animate: true,
@@ -94,39 +94,53 @@ function ZoomToSelected({ selectedHotspot }) {
 
 // Map.jsx mein add karo — MapContainer ke baad
 function CustomZoomControl() {
-  const map = useMap()
+  const map = useMap();
   return (
-    <div style={{
-      position: 'absolute', top: '16px', right: '16px', zIndex: 1000,
-      display: 'flex', flexDirection: 'column', gap: '4px',
-    }}>
-      {[{ label: '+', action: () => map.zoomIn() }, { label: '−', action: () => map.zoomOut() }].map(btn => (
+    <div
+      style={{
+        position: "absolute",
+        top: "16px",
+        right: "16px",
+        zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+      }}
+    >
+      {[
+        { label: "+", action: () => map.zoomIn() },
+        { label: "−", action: () => map.zoomOut() },
+      ].map((btn) => (
         <button
           key={btn.label}
           onClick={btn.action}
           style={{
-            width: '34px', height: '34px',
-            background: '#0f1623',
-            border: '1px solid #1e2d3d',
-            borderRadius: '10px',
-            color: '#94a3b8',
-            fontSize: '18px', fontWeight: '300',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            width: "34px",
+            height: "34px",
+            background: "#0f1623",
+            border: "1px solid #1e2d3d",
+            borderRadius: "10px",
+            color: "#94a3b8",
+            fontSize: "18px",
+            fontWeight: "300",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
             lineHeight: 1,
           }}
-          onMouseEnter={e => e.currentTarget.style.background = '#1a2535'}
-          onMouseLeave={e => e.currentTarget.style.background = '#0f1623'}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#1a2535")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#0f1623")}
         >
           {btn.label}
         </button>
       ))}
     </div>
-  )
+  );
 }
 
-function Map({ selectedHotspot }) {
+function Map({ selectedHotspot, realHotspots }) {
   const [layers, setLayers] = useState([
     {
       id: "hotspots",
@@ -158,6 +172,29 @@ function Map({ selectedHotspot }) {
   };
 
   const isActive = (id) => layers.find((l) => l.id === id)?.active;
+
+  const displayHotspots = realHotspots
+    ? realHotspots
+        .map((h, i) => ({
+          id: i,
+          lat: parseFloat(h.latitude),
+          lng: parseFloat(h.longitude),
+          frp: parseFloat(h.frp) || 0,
+          confidence: h.confidence,
+          type:
+            parseFloat(h.frp) > 100
+              ? "Wildfire"
+              : parseFloat(h.frp) > 50
+                ? "Industrial Fire"
+                : parseFloat(h.frp) > 20
+                  ? "Persistent Thermal Source"
+                  : "Low Risk",
+          city:
+            h.cityName ||
+            `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
+        }))
+        .filter((h) => !isNaN(h.lat) && !isNaN(h.lng) && h.frp > 0)
+    : hotspots;
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
@@ -221,15 +258,18 @@ function Map({ selectedHotspot }) {
           opacity={0.4}
         />
         <CustomZoomControl />
-        <PulseLayer />
-        <ZoomToSelected selectedHotspot={selectedHotspot} />
+        <PulseLayer hotspots={displayHotspots} />
+        <ZoomToSelected
+          selectedHotspot={selectedHotspot}
+          hotspots={displayHotspots}
+        />
 
         {isActive("hotspots") &&
-          hotspots.map((h) => (
+          displayHotspots.map((h) => (
             <CircleMarker
               key={h.id}
               center={[h.lat, h.lng]}
-              radius={h.frp / 15}
+              radius={Math.max(h.frp / 15, 6)}
               color={
                 selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)
               }
@@ -292,10 +332,11 @@ function Map({ selectedHotspot }) {
             data={industrialZones}
             style={{
               color: "#00ff88",
-              weight: 2,
-              opacity: 1,
+              weight: 1.5,
+              opacity: 0.8,
               fillColor: "#00ff88",
-              fillOpacity: 0.04,
+              fillOpacity: 0.08,
+              dashArray: "4 4", 
             }}
             onEachFeature={(feature, layer) => {
               layer.bindTooltip(feature.properties.name, {

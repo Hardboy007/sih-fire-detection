@@ -1,11 +1,51 @@
-import { useState } from "react";
 import Map from "../components/Map";
 import AlertPanel from "../components/AlertPanel";
 import StatsBar from "../components/StatsBar";
 import EventDetail from "../components/EventDetail";
+import { fetchHotspots } from "../services/api";
+import { useState, useEffect } from "react";
 
 function Dashboard() {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
+  const [realHotspots, setRealHotspots] = useState(null);
+
+  const fetchCityNames = async (hotspotsData) => {
+    const top10 = hotspotsData.slice(0, 10);
+    const withCities = await Promise.all(
+      top10.map(async (h) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${h.latitude}&lon=${h.longitude}&format=json`,
+          );
+          const data = await res.json();
+          return {
+            ...h,
+            cityName:
+              [
+                data.address?.city ||
+                  data.address?.town ||
+                  data.address?.village,
+                data.address?.state,
+              ]
+                .filter(Boolean)
+                .join(", ") || "Unknown",
+          };
+        } catch {
+          return { ...h, cityName: `${parseFloat(h.latitude).toFixed(2)}°N` };
+        }
+      }),
+    );
+    return withCities;
+  };
+
+  useEffect(() => {
+    fetchHotspots().then(async (data) => {
+      if (data) {
+        const withCities = await fetchCityNames(data);
+        setRealHotspots(withCities);
+      }
+    });
+  }, []);
 
   const now = new Date().toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -85,15 +125,42 @@ function Dashboard() {
         {/* Center - Status pills */}
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           {[
-            { label: "System", value: "Online", color: "#22c55e", bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.2)" },
-            { label: "Source", value: "NASA FIRMS", color: "#38bdf8", bg: "rgba(56,189,248,0.1)", border: "rgba(56,189,248,0.2)" },
-            { label: "Coverage", value: "India", color: "#94a3b8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.15)" },
-            { label: "Mode", value: "Live", color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)", pulse: true },
+            {
+              label: "System",
+              value: "Online",
+              color: "#22c55e",
+              bg: "rgba(34,197,94,0.1)",
+              border: "rgba(34,197,94,0.2)",
+            },
+            {
+              label: "Source",
+              value: "NASA FIRMS",
+              color: "#38bdf8",
+              bg: "rgba(56,189,248,0.1)",
+              border: "rgba(56,189,248,0.2)",
+            },
+            {
+              label: "Coverage",
+              value: "India",
+              color: "#94a3b8",
+              bg: "rgba(148,163,184,0.08)",
+              border: "rgba(148,163,184,0.15)",
+            },
+            {
+              label: "Mode",
+              value: "Live",
+              color: "#ef4444",
+              bg: "rgba(239,68,68,0.1)",
+              border: "rgba(239,68,68,0.2)",
+              pulse: true,
+            },
           ].map((item) => (
             <div
               key={item.label}
               style={{
-                display: "flex", alignItems: "center", gap: "6px",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
                 background: item.bg,
                 border: `1px solid ${item.border}`,
                 borderRadius: "20px",
@@ -101,19 +168,34 @@ function Dashboard() {
               }}
             >
               {item.pulse && (
-                <span style={{
-                  width: "5px", height: "5px",
-                  borderRadius: "50%",
-                  background: "#ef4444",
-                  display: "inline-block",
-                  animation: "pulse 1.4s infinite",
-                  flexShrink: 0,
-                }} />
+                <span
+                  style={{
+                    width: "5px",
+                    height: "5px",
+                    borderRadius: "50%",
+                    background: "#ef4444",
+                    display: "inline-block",
+                    animation: "pulse 1.4s infinite",
+                    flexShrink: 0,
+                  }}
+                />
               )}
-              <span style={{ fontSize: "10px", color: "#4a6080", fontWeight: "500" }}>
+              <span
+                style={{
+                  fontSize: "10px",
+                  color: "#4a6080",
+                  fontWeight: "500",
+                }}
+              >
                 {item.label}:
               </span>
-              <span style={{ fontSize: "10px", color: item.color, fontWeight: "600" }}>
+              <span
+                style={{
+                  fontSize: "10px",
+                  color: item.color,
+                  fontWeight: "600",
+                }}
+              >
                 {item.value}
               </span>
             </div>
@@ -121,17 +203,30 @@ function Dashboard() {
         </div>
 
         {/* Right - Time */}
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "flex-end",
-          background: "rgba(34,197,94,0.08)",
-          border: "1px solid rgba(34,197,94,0.15)",
-          borderRadius: "10px",
-          padding: "5px 12px",
-        }}>
-          <div style={{ color: "#4a6080", fontSize: "9px", fontWeight: "600", letterSpacing: "0.5px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            background: "rgba(34,197,94,0.08)",
+            border: "1px solid rgba(34,197,94,0.15)",
+            borderRadius: "10px",
+            padding: "5px 12px",
+          }}
+        >
+          <div
+            style={{
+              color: "#4a6080",
+              fontSize: "9px",
+              fontWeight: "600",
+              letterSpacing: "0.5px",
+            }}
+          >
             IST
           </div>
-          <div style={{ color: "#22c55e", fontSize: "12px", fontWeight: "600" }}>
+          <div
+            style={{ color: "#22c55e", fontSize: "12px", fontWeight: "600" }}
+          >
             {now}
           </div>
         </div>
@@ -143,7 +238,7 @@ function Dashboard() {
       {/* MAIN CONTENT */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <div style={{ flex: 1, position: "relative" }}>
-          <Map selectedHotspot={selectedHotspot} />
+          <Map selectedHotspot={selectedHotspot} realHotspots={realHotspots} />
           {selectedHotspot && (
             <EventDetail
               hotspot={selectedHotspot}
@@ -162,6 +257,7 @@ function Dashboard() {
           <AlertPanel
             onHotspotSelect={setSelectedHotspot}
             selectedHotspot={selectedHotspot}
+            realHotspots={realHotspots}
           />
         </div>
       </div>
