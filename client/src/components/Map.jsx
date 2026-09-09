@@ -5,6 +5,7 @@ import {
   Popup,
   useMap,
   GeoJSON,
+  Circle,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
@@ -29,14 +30,14 @@ const getColor = (type) => {
   }
 };
 
-function PulseLayer({ hotspots: data }) {
+function PulseLayer({ hotspots }) {
   const map = useMap();
 
   useEffect(() => {
     const markers = [];
 
-    data.forEach((h) => {
-      if (h.frp > 100) {
+    hotspots.forEach((h) => {
+      if (h.frp > 10) {
         const pulseIcon = L.divIcon({
           className: "",
           html: `
@@ -69,7 +70,7 @@ function PulseLayer({ hotspots: data }) {
     });
 
     return () => markers.forEach((m) => map.removeLayer(m));
-  }, [map]);
+  }, [map, hotspots]);
 
   return null;
 }
@@ -181,6 +182,7 @@ function Map({ selectedHotspot, realHotspots }) {
           lng: parseFloat(h.longitude),
           frp: parseFloat(h.frp) || 0,
           confidence: h.confidence,
+          scan: h.scan,
           type:
             parseFloat(h.frp) > 100
               ? "Wildfire"
@@ -194,7 +196,7 @@ function Map({ selectedHotspot, realHotspots }) {
             `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
         }))
         .filter((h) => !isNaN(h.lat) && !isNaN(h.lng) && h.frp > 0)
-    : hotspots;
+    : [];
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
@@ -266,65 +268,79 @@ function Map({ selectedHotspot, realHotspots }) {
 
         {isActive("hotspots") &&
           displayHotspots.map((h) => (
-            <CircleMarker
-              key={h.id}
-              center={[h.lat, h.lng]}
-              radius={Math.max(h.frp / 15, 6)}
-              color={
-                selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)
-              }
-              fillColor={getColor(h.type)}
-              fillOpacity={0.85}
-              weight={selectedHotspot?.id === h.id ? 3 : 2}
-            >
-              <Popup>
-                <div style={{ padding: "14px 16px", minWidth: "170px" }}>
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "700",
-                      color: "#f1f5f9",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    📍 {h.city}
+            <>
+              {/* Real area */}
+              <Circle
+                key={`area-${h.id}`}
+                center={[h.lat, h.lng]}
+                radius={Math.max(2000, (parseFloat(h.scan) || 1) * 1000)}
+                color={getColor(h.type)}
+                fillColor={getColor(h.type)}
+                fillOpacity={0.1}
+                weight={1}
+              />
+
+              {/* Visible dot */}
+              <CircleMarker
+                key={h.id}
+                center={[h.lat, h.lng]}
+                radius={8}
+                color={
+                  selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)
+                }
+                fillColor={getColor(h.type)}
+                fillOpacity={0.9}
+                weight={2}
+              >
+                <Popup>
+                  <div style={{ padding: "14px 16px", minWidth: "170px" }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        color: "#f1f5f9",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      📍 {h.city}
+                    </div>
+                    <div
+                      style={{
+                        height: "1px",
+                        background: "#1e2d3d",
+                        marginBottom: "8px",
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "5px",
+                      }}
+                    >
+                      <div style={{ fontSize: "11px" }}>
+                        <span style={{ color: "#4a6080" }}>Type: </span>
+                        <span
+                          style={{ color: getColor(h.type), fontWeight: "600" }}
+                        >
+                          {h.type}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "11px" }}>
+                        <span style={{ color: "#4a6080" }}>FRP: </span>
+                        <span style={{ color: "#e2e8f0", fontWeight: "600" }}>
+                          {h.frp} MW
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "11px" }}>
+                        <span style={{ color: "#4a6080" }}>Confidence: </span>
+                        <span style={{ color: "#e2e8f0" }}>{h.confidence}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      height: "1px",
-                      background: "#1e2d3d",
-                      marginBottom: "8px",
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "5px",
-                    }}
-                  >
-                    <div style={{ fontSize: "11px" }}>
-                      <span style={{ color: "#4a6080" }}>Type: </span>
-                      <span
-                        style={{ color: getColor(h.type), fontWeight: "600" }}
-                      >
-                        {h.type}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "11px" }}>
-                      <span style={{ color: "#4a6080" }}>FRP: </span>
-                      <span style={{ color: "#e2e8f0", fontWeight: "600" }}>
-                        {h.frp} MW
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "11px" }}>
-                      <span style={{ color: "#4a6080" }}>Confidence: </span>
-                      <span style={{ color: "#e2e8f0" }}>{h.confidence}</span>
-                    </div>
-                  </div>
-                </div>
-              </Popup>
-            </CircleMarker>
+                </Popup>
+              </CircleMarker>
+            </>
           ))}
 
         {isActive("industrial") && (
@@ -336,7 +352,7 @@ function Map({ selectedHotspot, realHotspots }) {
               opacity: 0.8,
               fillColor: "#00ff88",
               fillOpacity: 0.08,
-              dashArray: "4 4", 
+              dashArray: "4 4",
             }}
             onEachFeature={(feature, layer) => {
               layer.bindTooltip(feature.properties.name, {

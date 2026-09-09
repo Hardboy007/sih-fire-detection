@@ -13,3 +13,17 @@ export const fetchHotspots = async () => {
     return null
   }
 }
+
+export const fetchIndustrialZones = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/industrial-zones`)
+    const data = await response.json()
+    if (data.success) {
+      return data.data
+    }
+    return null
+  } catch (err) {
+    console.log('Industrial zones API not ready')
+    return null
+  }
+}

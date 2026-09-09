@@ -40,13 +40,14 @@ function AlertPanel({ onHotspotSelect, selectedHotspot, realHotspots }) {
                 : parseFloat(h.frp) > 20
                   ? "Persistent Thermal Source"
                   : "Low Risk",
-          city: h.cityName || `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
+          city: h.city ? `${h.city}${h.country ? ', ' + h.country : ''}` : `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
           time: new Date().toLocaleTimeString("en-IN", {
             hour: "2-digit",
             minute: "2-digit",
           }),
         }))
         .filter((h) => !isNaN(h.lat) && !isNaN(h.lng) && h.frp > 0)
+        .slice(0, 100)
     : [];
   const [activeFilter, setActiveFilter] = useState("ALL");
 

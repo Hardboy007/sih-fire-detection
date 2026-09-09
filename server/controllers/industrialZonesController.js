@@ -2,20 +2,10 @@ const axios = require("axios");
 
 const getIndustrialZones = async (req, res) => {
   try {
-    const query = `
-      [out:json][timeout:25];
-      area["name"="India"]->.searchArea;
-      (
-        way["landuse"="industrial"](area.searchArea);
-        relation["landuse"="industrial"](area.searchArea);
-      );
-      out geom;
-    `;
+    const query = `[out:json][timeout:25];area["name"="India"]["admin_level"="2"]->.searchArea;(way["landuse"="industrial"](area.searchArea);relation["landuse"="industrial"](area.searchArea););out geom qt 50;`;
 
-    const response = await axios.post(
-      "https://overpass-api.de/api/interpreter",
-      query,
-      { headers: { "Content-Type": "text/plain" } }
+    const response = await axios.get(
+      `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
     );
 
     res.json({ success: true, data: response.data });
