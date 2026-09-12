@@ -11,7 +11,7 @@ function LoadingLine({ text, delay }) {
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), delay);
-    const t2 = setTimeout(() => setDone(true), delay + 1900)
+    const t2 = setTimeout(() => setDone(true), delay + 1900);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -27,11 +27,11 @@ function LoadingLine({ text, delay }) {
         alignItems: "center",
         gap: "10px",
         animation: "fadeIn 0.3s ease",
-        fontSize: "11px",
+        fontSize: "12px",
       }}
     >
       {done ? (
-        <span style={{ color: "#22c55e", fontSize: "13px" }}>✓</span>
+        <span style={{ color: "#22c55e", fontSize: "14px" }}>✓</span>
       ) : (
         <span
           style={{
@@ -46,7 +46,7 @@ function LoadingLine({ text, delay }) {
           }}
         />
       )}
-      <span style={{ color: done ? "#94a3b8" : "#38bdf8" }}>{text}</span>
+      <span style={{ color: done ? "#6a8aaa" : "#38bdf8" }}>{text}</span>
     </div>
   );
 }
@@ -54,32 +54,35 @@ function LoadingLine({ text, delay }) {
 function Dashboard() {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [realHotspots, setRealHotspots] = useState(null);
-  // const [realZones, setRealZones] = useState(null);
-  fetchHotspots().then(async (data) => {
-  if (data) {
-    const withCities = await fetchCityNames(data)
-    
-    // Demo ke liye ek critical alert add karo
-    const mockCritical = {
-      latitude: "21.1458",
-      longitude: "79.0882",
-      brightness: "425.5",
-      frp: "142.5",
-      confidence: "95",
-      acq_date: new Date().toISOString().split('T')[0],
-      acq_time: new Date().toTimeString().slice(0,5).replace(':',''),
-      satellite: "Terra",
-      instrument: "MODIS",
-      scan: "1.2",
-      track: "1.1",
-      city: "Nagpur",
-      cityName: "Nagpur, Maharashtra",
-      country: "India"
-    }
-    
-    setRealHotspots([mockCritical, ...withCities])
-  }
-})
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const handleHotspotSelect = (hotspot) => {
+    console.log("hotspot:", hotspot);
+    setSelectedHotspot(hotspot);
+  };
+  const [nowStr, setNowStr] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const d = new Date();
+      const time = d.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const date = d.toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      setNowStr({ time, date });
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const fetchCityNames = async (hotspotsData) => {
     const top10 = hotspotsData.slice(0, 10);
@@ -87,42 +90,60 @@ function Dashboard() {
       top10.map(async (h) => {
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${h.latitude}&lon=${h.longitude}&format=json`,
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${h.latitude}&longitude=${h.longitude}&localityLanguage=en`,
           );
+          if (!res.ok) throw new Error("API error");
           const data = await res.json();
+          const city =
+            data?.city || data?.locality || data?.principalSubdivision || null;
+          const country = data?.countryName || null;
           return {
             ...h,
-            cityName:
-              [
-                data.address?.city ||
-                  data.address?.town ||
-                  data.address?.village,
-                data.address?.state,
-              ]
-                .filter(Boolean)
-                .join(", ") || "Unknown",
+            cityName: city
+              ? `${city}${country ? ", " + country : ""}`
+              : `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
           };
         } catch {
-          return { ...h, cityName: `${parseFloat(h.latitude).toFixed(2)}°N` };
+          return {
+            ...h,
+            cityName: `${parseFloat(h.latitude).toFixed(2)}°N, ${parseFloat(h.longitude).toFixed(2)}°E`,
+          };
         }
       }),
     );
     return withCities;
   };
-
+  
   useEffect(() => {
-    fetchHotspots().then(async (data) => {
+    const loadData = async () => {
+      const data = await fetchHotspots();
       if (data) {
-        console.log("FIRMS raw sample:", data[0]);
         const withCities = await fetchCityNames(data);
-        setRealHotspots(withCities);
+        const mockCritical = {
+          latitude: "21.1458",
+          longitude: "79.0882",
+          brightness: "425.5",
+          frp: "142.5",
+          confidence: "95",
+          acq_date: new Date().toISOString().split("T")[0],
+          acq_time: "0742",
+          satellite: "Terra",
+          instrument: "MODIS",
+          scan: "1.2",
+          track: "1.1",
+          cityName: "Nagpur, Maharashtra",
+          country: "India",
+        };
+        setRealHotspots([mockCritical, ...withCities]);
+        setLastUpdated(new Date());
       }
-    });
+    };
 
-    // fetchIndustrialZones().then((data) => {
-    //   if (data) setRealZones(data);
-    // });
+    loadData();
+    const interval = setInterval(loadData, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
+
   const indiaHotspots = realHotspots
     ? realHotspots.filter((h) => {
         const lat = parseFloat(h.latitude);
@@ -130,15 +151,8 @@ function Dashboard() {
         return lat >= 8 && lat <= 37 && lng >= 68 && lng <= 97;
       })
     : null;
-  const now = new Date().toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
+  /* ── LOADING SCREEN ── */
   if (!realHotspots) {
     return (
       <div
@@ -151,20 +165,25 @@ function Dashboard() {
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "'Inter', sans-serif",
-          gap: "24px",
+          gap: "28px",
         }}
       >
+        <style>{`
+          @keyframes pulseGlow { 0%,100%{box-shadow:0 0 30px #ff450055} 50%{box-shadow:0 0 56px #ff450099} }
+          @keyframes fadeIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+          @keyframes spin { to{transform:rotate(360deg)} }
+        `}</style>
+
         <div
           style={{
-            width: "60px",
-            height: "60px",
+            width: "64px",
+            height: "64px",
             background: "radial-gradient(circle, #ff4500, #cc0000)",
-            borderRadius: "16px",
+            borderRadius: "18px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "28px",
-            boxShadow: "0 0 30px #ff450055",
+            fontSize: "30px",
             animation: "pulseGlow 1.4s infinite",
           }}
         >
@@ -175,31 +194,31 @@ function Dashboard() {
           <div
             style={{
               color: "#f1f5f9",
-              fontSize: "20px",
-              fontWeight: "700",
+              fontSize: "22px",
+              fontWeight: "800",
+              letterSpacing: "-0.3px",
               marginBottom: "6px",
             }}
           >
             AGNI DRISHTI
           </div>
           <div
-            style={{ color: "#4a6080", fontSize: "11px", letterSpacing: "2px" }}
+            style={{ color: "#3a5570", fontSize: "11px", letterSpacing: "3px" }}
           >
             INDUSTRIAL FIRE DETECTION SYSTEM
           </div>
         </div>
 
-        {/* Status lines */}
         <div
           style={{
             background: "#0f1623",
             border: "1px solid #1e2d3d",
-            borderRadius: "12px",
-            padding: "16px 24px",
-            width: "320px",
+            borderRadius: "14px",
+            padding: "20px 28px",
+            width: "340px",
             display: "flex",
             flexDirection: "column",
-            gap: "10px",
+            gap: "12px",
           }}
         >
           {[
@@ -217,28 +236,15 @@ function Dashboard() {
         </div>
 
         <div
-          style={{ color: "#2a4060", fontSize: "10px", letterSpacing: "1px" }}
+          style={{ color: "#1e3a52", fontSize: "10px", letterSpacing: "1.5px" }}
         >
           INDIA · SATELLITE · FIRMS OVERLAY
         </div>
-
-        <style>{`
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 30px #ff450055; }
-          50% { box-shadow: 0 0 50px #ff450099; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateX(-8px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-          @keyframes spin {
-  to { transform: rotate(360deg); }
-}
-      `}</style>
       </div>
     );
   }
 
+  /* ── MAIN DASHBOARD ── */
   return (
     <div
       style={{
@@ -246,37 +252,53 @@ function Dashboard() {
         flexDirection: "column",
         width: "100vw",
         height: "100vh",
-        background: "#0a0a0f",
+        background: "#0a1020",
         fontFamily: "'Inter', sans-serif",
+        overflow: "hidden",
       }}
     >
-      {/* NAVBAR */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        .nav-pill {
+          display: flex; align-items: center; gap: 5px;
+          border-radius: 20px; padding: 4px 11px;
+          font-family: 'Inter', sans-serif;
+          transition: background 0.15s;
+        }
+        .nav-pill-label { font-size: 10px; color: #4a6080; font-weight: 500; }
+        .nav-pill-value { font-size: 10px; font-weight: 700; }
+      `}</style>
+
+      {/* ── NAVBAR ── */}
       <div
         style={{
-          height: "56px",
-          background: "#0f1623",
-          borderBottom: "1px solid #1e2d3d",
+          height: "52px",
+          background: "#0c1422",
+          borderBottom: "1px solid #1a2a3a",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 24px",
+          padding: "0 20px",
           zIndex: 1000,
           flexShrink: 0,
         }}
       >
-        {/* Left - Logo + Title */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Logo + title */}
+        <div style={{ display: "flex", alignItems: "center", gap: "11px" }}>
           <div
             style={{
               width: "34px",
               height: "34px",
-              background: "radial-gradient(circle, #ff4500, #cc0000)",
+              background:
+                "radial-gradient(circle at 40% 40%, #ff5500, #bb1100)",
               borderRadius: "10px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "16px",
-              boxShadow: "0 0 14px #ff450055",
+              fontSize: "17px",
               flexShrink: 0,
             }}
           >
@@ -286,68 +308,61 @@ function Dashboard() {
             <div
               style={{
                 color: "#f1f5f9",
-                fontSize: "14px",
-                fontWeight: "700",
-                letterSpacing: "0.3px",
+                fontSize: "15px",
+                fontWeight: "800",
+                letterSpacing: "-0.2px",
+                lineHeight: 1,
               }}
             >
               Agni Drishti
             </div>
             <div
-              style={{
-                color: "#4a6080",
-                fontSize: "10px",
-                fontWeight: "500",
-              }}
+              style={{ color: "#3a5570", fontSize: "10px", marginTop: "2px" }}
             >
               Industrial Fire Detection · NASA FIRMS
             </div>
           </div>
         </div>
 
-        {/* Center - Status pills */}
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        {/* Status pills */}
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {[
             {
               label: "System",
               value: "Online",
               color: "#22c55e",
-              bg: "rgba(34,197,94,0.1)",
+              bg: "rgba(34,197,94,0.09)",
               border: "rgba(34,197,94,0.2)",
             },
             {
               label: "Source",
               value: "NASA FIRMS",
               color: "#38bdf8",
-              bg: "rgba(56,189,248,0.1)",
+              bg: "rgba(56,189,248,0.09)",
               border: "rgba(56,189,248,0.2)",
             },
             {
               label: "Coverage",
               value: "India",
               color: "#94a3b8",
-              bg: "rgba(148,163,184,0.08)",
-              border: "rgba(148,163,184,0.15)",
+              bg: "rgba(148,163,184,0.06)",
+              border: "rgba(148,163,184,0.14)",
             },
             {
               label: "Mode",
               value: "Live",
               color: "#ef4444",
-              bg: "rgba(239,68,68,0.1)",
+              bg: "rgba(239,68,68,0.09)",
               border: "rgba(239,68,68,0.2)",
               pulse: true,
             },
           ].map((item) => (
             <div
               key={item.label}
+              className="nav-pill"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
                 background: item.bg,
                 border: `1px solid ${item.border}`,
-                borderRadius: "20px",
-                padding: "4px 10px",
               }}
             >
               {item.pulse && (
@@ -358,69 +373,87 @@ function Dashboard() {
                     borderRadius: "50%",
                     background: "#ef4444",
                     display: "inline-block",
-                    animation: "pulse 1.4s infinite",
+                    animation: "livePulse 1.4s infinite",
                     flexShrink: 0,
                   }}
                 />
               )}
-              <span
-                style={{
-                  fontSize: "10px",
-                  color: "#4a6080",
-                  fontWeight: "500",
-                }}
-              >
-                {item.label}:
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  color: item.color,
-                  fontWeight: "600",
-                }}
-              >
+              <span className="nav-pill-label">{item.label}:</span>
+              <span className="nav-pill-value" style={{ color: item.color }}>
                 {item.value}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Right - Time */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            background: "rgba(34,197,94,0.08)",
-            border: "1px solid rgba(34,197,94,0.15)",
-            borderRadius: "10px",
-            padding: "5px 12px",
-          }}
-        >
+        {/* Clock */}
+        {nowStr && (
           <div
             style={{
-              color: "#4a6080",
-              fontSize: "9px",
-              fontWeight: "600",
-              letterSpacing: "0.5px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              background: "rgba(34,197,94,0.07)",
+              border: "1px solid rgba(34,197,94,0.14)",
+              borderRadius: "10px",
+              padding: "5px 13px",
             }}
           >
-            IST
+            <div
+              style={{
+                color: "#3a5570",
+                fontSize: "9px",
+                fontWeight: "600",
+                letterSpacing: "1px",
+              }}
+            >
+              IST
+            </div>
+            <div
+              style={{
+                color: "#22c55e",
+                fontSize: "13px",
+                fontWeight: "700",
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1.2,
+              }}
+            >
+              {nowStr.time}
+            </div>
+            <div
+              style={{ color: "#2a4a30", fontSize: "9px", marginTop: "1px" }}
+            >
+              {nowStr.date}
+            </div>
+            {lastUpdated && (
+              <div
+                style={{
+                  color: "#2a4060",
+                  fontSize: "8px",
+                  marginTop: "2px",
+                  letterSpacing: "0.3px",
+                }}
+              >
+                Updated:{" "}
+                {lastUpdated.toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            )}
           </div>
-          <div
-            style={{ color: "#22c55e", fontSize: "12px", fontWeight: "600" }}
-          >
-            {now}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* STATS BAR */}
+      {/* ── STATS BAR ── */}
       <StatsBar hotspots={indiaHotspots} />
 
-      {/* MAIN CONTENT */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <div style={{ flex: 1, position: "relative" }}>
+      {/* ── MAIN CONTENT ── */}
+      <div
+        style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}
+      >
+        {/* Map area */}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           <Map selectedHotspot={selectedHotspot} realHotspots={realHotspots} />
           {selectedHotspot && (
             <EventDetail
@@ -429,28 +462,26 @@ function Dashboard() {
             />
           )}
         </div>
+
+        {/* Alert panel — fixed width, no overflowY here, AlertPanel handles its own scroll */}
         <div
           style={{
-            width: "320px",
+            width: "330px",
+            flexShrink: 0,
             background: "#0f1623",
-            borderLeft: "1px solid #1e2d3d",
-            overflowY: "auto",
+            borderLeft: "1px solid #1a2a3a",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <AlertPanel
-            onHotspotSelect={setSelectedHotspot}
+            onHotspotSelect={handleHotspotSelect}
             selectedHotspot={selectedHotspot}
-            realHotspots={realHotspots}
+            realHotspots={indiaHotspots}
           />
         </div>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 }

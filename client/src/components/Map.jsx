@@ -14,6 +14,7 @@ import { mapHotspots as hotspots } from "../data/hotspots";
 import { industrialZones } from "../data/industrialZones";
 import LayerPanel from "./LayerPanel";
 import { useState } from "react";
+import React from "react";
 
 const getColor = (type) => {
   switch (type) {
@@ -41,21 +42,21 @@ function PulseLayer({ hotspots }) {
         const pulseIcon = L.divIcon({
           className: "",
           html: `
-            <div style="position: relative; width: 20px; height: 20px;">
+            <div style="position:relative;width:20px;height:20px;">
               <div style="
-                position: absolute;
-                width: 20px; height: 20px;
-                border-radius: 50%;
-                background: ${getColor(h.type)};
-                opacity: 0.4;
-                animation: pulseRing 1.5s ease-out infinite;
+                position:absolute;
+                width:20px;height:20px;
+                border-radius:50%;
+                background:${getColor(h.type)};
+                opacity:0.4;
+                animation:pulseRing 1.5s ease-out infinite;
               "></div>
               <div style="
-                position: absolute;
-                top: 5px; left: 5px;
-                width: 10px; height: 10px;
-                border-radius: 50%;
-                background: ${getColor(h.type)};
+                position:absolute;
+                top:5px;left:5px;
+                width:10px;height:10px;
+                border-radius:50%;
+                background:${getColor(h.type)};
               "></div>
             </div>
           `,
@@ -79,23 +80,40 @@ function ZoomToSelected({ selectedHotspot, hotspots: data }) {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedHotspot) {
-      const h = data.find((h) => h.id === selectedHotspot.id);
-      if (h) {
-        map.flyTo([h.lat, h.lng], 8, {
-          animate: true,
-          duration: 1.2,
-        });
-      }
+    if (!selectedHotspot) return;
+
+    // Direct lat/lng use karo
+    const lat = parseFloat(
+      selectedHotspot.lat ?? selectedHotspot.latitude
+    );
+    const lng = parseFloat(
+      selectedHotspot.lng ?? selectedHotspot.longitude
+    );
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      map.flyTo([lat, lng], 8, {
+        animate: true,
+        duration: 1.2,
+      });
+      return;
+    }
+
+    // Fallback — array mein dhundho
+    const h = data.find((h) => h.id === selectedHotspot.id);
+    if (h) {
+      map.flyTo([h.lat, h.lng], 8, {
+        animate: true,
+        duration: 1.2,
+      });
     }
   }, [selectedHotspot, map]);
 
   return null;
 }
 
-// Map.jsx mein add karo — MapContainer ke baad
 function CustomZoomControl() {
   const map = useMap();
+
   return (
     <div
       style={{
@@ -116,13 +134,13 @@ function CustomZoomControl() {
           key={btn.label}
           onClick={btn.action}
           style={{
-            width: "34px",
-            height: "34px",
+            width: "36px",
+            height: "36px",
             background: "#0f1623",
             border: "1px solid #1e2d3d",
             borderRadius: "10px",
             color: "#94a3b8",
-            fontSize: "18px",
+            fontSize: "20px",
             fontWeight: "300",
             cursor: "pointer",
             display: "flex",
@@ -130,13 +148,113 @@ function CustomZoomControl() {
             justifyContent: "center",
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
             lineHeight: 1,
+            fontFamily: "'Inter', sans-serif",
+            transition: "background 0.15s, color 0.15s",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#1a2535")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#0f1623")}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#1a2535";
+            e.currentTarget.style.color = "#f1f5f9";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#0f1623";
+            e.currentTarget.style.color = "#94a3b8";
+          }}
         >
           {btn.label}
         </button>
       ))}
+
+      {/* Reset view button */}
+      <button
+        onClick={() =>
+          map.flyTo([22.5, 82.0], 5, { animate: true, duration: 1 })
+        }
+        title="Reset view"
+        style={{
+          width: "36px",
+          height: "36px",
+          background: "#0f1623",
+          border: "1px solid #1e2d3d",
+          borderRadius: "10px",
+          color: "#4a6080",
+          fontSize: "14px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          marginTop: "4px",
+          transition: "background 0.15s, color 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#1a2535";
+          e.currentTarget.style.color = "#f1f5f9";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "#0f1623";
+          e.currentTarget.style.color = "#4a6080";
+        }}
+      >
+        ⊙
+      </button>
+    </div>
+  );
+}
+
+/* Live hotspot count overlay */
+function StatsOverlay({ hotspots }) {
+  const critical = hotspots.filter((h) => h.type === "Wildfire").length;
+  const total = hotspots.length;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: "24px",
+        right: "16px",
+        zIndex: 1000,
+        background: "#0f1623",
+        border: "1px solid #1e2d3d",
+        borderRadius: "12px",
+        padding: "10px 14px",
+        fontFamily: "'Inter', sans-serif",
+        display: "flex",
+        gap: "16px",
+        alignItems: "center",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: "700",
+            color: "#f1f5f9",
+            lineHeight: 1,
+          }}
+        >
+          {total}
+        </div>
+        <div style={{ fontSize: "10px", color: "#4a6080", marginTop: "3px" }}>
+          Total
+        </div>
+      </div>
+      <div style={{ width: "1px", height: "28px", background: "#1e2d3d" }} />
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: "700",
+            color: "#ef4444",
+            lineHeight: 1,
+          }}
+        >
+          {critical}
+        </div>
+        <div style={{ fontSize: "10px", color: "#4a6080", marginTop: "3px" }}>
+          Critical
+        </div>
+      </div>
     </div>
   );
 }
@@ -166,11 +284,10 @@ function Map({ selectedHotspot, realHotspots }) {
     },
   ]);
 
-  const toggleLayer = (id) => {
+  const toggleLayer = (id) =>
     setLayers((prev) =>
       prev.map((l) => (l.id === id ? { ...l, active: !l.active } : l)),
     );
-  };
 
   const isActive = (id) => layers.find((l) => l.id === id)?.active;
 
@@ -200,7 +317,6 @@ function Map({ selectedHotspot, realHotspots }) {
 
   return (
     <div style={{ position: "relative", height: "100%", width: "100%" }}>
-      {/* Popup dark theme override */}
       <style>{`
         .leaflet-popup-content-wrapper {
           background: #0f1623 !important;
@@ -223,9 +339,17 @@ function Map({ selectedHotspot, realHotspots }) {
           top: 8px !important;
           right: 10px !important;
         }
-        .leaflet-popup-close-button:hover {
-          color: #94a3b8 !important;
+        .leaflet-popup-close-button:hover { color: #94a3b8 !important; }
+
+        .leaflet-control-attribution {
+          background: rgba(15,22,35,0.85) !important;
+          color: #2a4060 !important;
+          font-size: 9px !important;
+          border-radius: 6px 0 0 0 !important;
+          padding: 2px 6px !important;
         }
+        .leaflet-control-attribution a { color: #3a5570 !important; }
+
         .industrial-tooltip {
           background: #0f1623 !important;
           border: 1px solid #1e2d3d !important;
@@ -236,8 +360,11 @@ function Map({ selectedHotspot, realHotspots }) {
           padding: 4px 10px !important;
           box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
         }
-        .industrial-tooltip::before {
-          display: none !important;
+        .industrial-tooltip::before { display: none !important; }
+
+        @keyframes pulseRing {
+          0%   { transform: scale(1);   opacity: 0.4; }
+          100% { transform: scale(2.5); opacity: 0; }
         }
       `}</style>
 
@@ -251,14 +378,15 @@ function Map({ selectedHotspot, realHotspots }) {
         scrollWheelZoom={true}
       >
         <TileLayer
-          url="https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg"
-          attribution="&copy; Stadia Maps"
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution="&copy; Esri"
         />
         <TileLayer
-          url="https://tiles.stadiamaps.com/tiles/stadia_osm_bright/{z}/{x}/{y}{r}.png"
-          attribution=""
-          opacity={0.4}
+          url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+          attribution="&copy; CartoDB"
+          opacity={0.9}
         />
+
         <CustomZoomControl />
         <PulseLayer hotspots={displayHotspots} />
         <ZoomToSelected
@@ -268,8 +396,7 @@ function Map({ selectedHotspot, realHotspots }) {
 
         {isActive("hotspots") &&
           displayHotspots.map((h) => (
-            <>
-              {/* Real area */}
+            <React.Fragment key={h.id}>
               <Circle
                 key={`area-${h.id}`}
                 center={[h.lat, h.lng]}
@@ -279,68 +406,124 @@ function Map({ selectedHotspot, realHotspots }) {
                 fillOpacity={0.1}
                 weight={1}
               />
-
-              {/* Visible dot */}
               <CircleMarker
                 key={h.id}
                 center={[h.lat, h.lng]}
-                radius={8}
+                radius={selectedHotspot?.id === h.id ? 10 : 7}
                 color={
                   selectedHotspot?.id === h.id ? "#ffffff" : getColor(h.type)
                 }
                 fillColor={getColor(h.type)}
                 fillOpacity={0.9}
-                weight={2}
+                weight={selectedHotspot?.id === h.id ? 2.5 : 1.5}
               >
                 <Popup>
-                  <div style={{ padding: "14px 16px", minWidth: "170px" }}>
+                  <div style={{ padding: "14px 16px", minWidth: "180px" }}>
+                    {/* Popup header */}
                     <div
                       style={{
-                        fontSize: "14px",
-                        fontWeight: "700",
-                        color: "#f1f5f9",
-                        marginBottom: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "10px",
                       }}
                     >
-                      📍 {h.city}
+                      <div
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          background: getColor(h.type),
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "700",
+                          color: "#f1f5f9",
+                        }}
+                      >
+                        {h.city}
+                      </div>
                     </div>
+
+                    {/* Type badge */}
+                    <div
+                      style={{
+                        display: "inline-block",
+                        fontSize: "10px",
+                        fontWeight: "600",
+                        color: getColor(h.type),
+                        background: `${getColor(h.type)}18`,
+                        border: `1px solid ${getColor(h.type)}30`,
+                        borderRadius: "20px",
+                        padding: "2px 8px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      {h.type}
+                    </div>
+
                     <div
                       style={{
                         height: "1px",
                         background: "#1e2d3d",
-                        marginBottom: "8px",
+                        marginBottom: "10px",
                       }}
                     />
+
                     <div
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "5px",
+                        gap: "6px",
                       }}
                     >
-                      <div style={{ fontSize: "11px" }}>
-                        <span style={{ color: "#4a6080" }}>Type: </span>
-                        <span
-                          style={{ color: getColor(h.type), fontWeight: "600" }}
+                      {[
+                        {
+                          label: "FRP",
+                          value: `${h.frp} MW`,
+                          color: getColor(h.type),
+                        },
+                        {
+                          label: "Confidence",
+                          value: h.confidence,
+                          color: "#e2e8f0",
+                        },
+                        {
+                          label: "Coords",
+                          value: `${Number(h.lat).toFixed(3)}°N, ${Number(h.lng).toFixed(3)}°E`,
+                          color: "#e2e8f0",
+                        },
+                      ].map((row) => (
+                        <div
+                          key={row.label}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
                         >
-                          {h.type}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "11px" }}>
-                        <span style={{ color: "#4a6080" }}>FRP: </span>
-                        <span style={{ color: "#e2e8f0", fontWeight: "600" }}>
-                          {h.frp} MW
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "11px" }}>
-                        <span style={{ color: "#4a6080" }}>Confidence: </span>
-                        <span style={{ color: "#e2e8f0" }}>{h.confidence}</span>
-                      </div>
+                          <span style={{ fontSize: "11px", color: "#4a6080" }}>
+                            {row.label}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              color: row.color,
+                            }}
+                          >
+                            {row.value}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </Popup>
               </CircleMarker>
-            </>
+            </React.Fragment>
           ))}
 
         {isActive("industrial") && (
@@ -363,6 +546,9 @@ function Map({ selectedHotspot, realHotspots }) {
           />
         )}
       </MapContainer>
+
+      {/* Stats overlay — outside MapContainer so z-index works cleanly */}
+      <StatsOverlay hotspots={displayHotspots} />
     </div>
   );
 }

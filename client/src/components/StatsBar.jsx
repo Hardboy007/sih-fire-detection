@@ -1,33 +1,10 @@
 import { useState, useEffect } from "react";
 
-const getStats = (hotspots) => {
-  if (!hotspots || hotspots.length === 0)
-    return {
-      total: 0,
-      high: 0,
-      medium: 0,
-      low: 0,
-      persistent: 0,
-    };
-
-  const total = hotspots.length;
-  const high = hotspots.filter((h) => parseFloat(h.frp) > 100).length;
-  const medium = hotspots.filter(
-    (h) => parseFloat(h.frp) > 50 && parseFloat(h.frp) <= 100,
-  ).length;
-  const low = hotspots.filter(
-    (h) => parseFloat(h.frp) <= 50 && h.confidence === "low",
-  ).length;
-  const persistent = hotspots.filter((h) => h.confidence === "nominal").length;
-
-  return { total, high, medium, low, persistent };
-};
-
 function AnimatedValue({ target }) {
   const [val, setVal] = useState(0);
   useEffect(() => {
-    setVal(0)
-    if (target === 0) return
+    setVal(0);
+    if (target === 0) return;
     let start = 0;
     const step = () => {
       start += 1;
@@ -37,7 +14,7 @@ function AnimatedValue({ target }) {
     const t = setTimeout(() => requestAnimationFrame(step), 200);
     return () => clearTimeout(t);
   }, [target]);
-  return <>{String(val).padStart(2, '0')}</>;
+  return <>{String(val).padStart(2, "0")}</>;
 }
 
 export default function StatsBar({ hotspots }) {
@@ -69,14 +46,14 @@ export default function StatsBar({ hotspots }) {
     {
       label: "Total Events",
       value: total,
-      change: "Live",
+      sub: "Live feed",
       color: "#38bdf8",
-      accent: "rgba(56,189,248,0.12)",
-      border: "rgba(56,189,248,0.2)",
+      accent: "rgba(56,189,248,0.08)",
+      border: "rgba(56,189,248,0.16)",
       icon: (
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -89,15 +66,15 @@ export default function StatsBar({ hotspots }) {
     {
       label: "High Risk",
       value: high,
-      sub: "Critical · Immediate action",
+      sub: "Immediate action",
       color: "#f87171",
-      accent: "rgba(248,113,113,0.1)",
-      border: "rgba(248,113,113,0.22)",
+      accent: "rgba(248,113,113,0.08)",
+      border: "rgba(248,113,113,0.18)",
       pulse: high > 0,
       icon: (
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -114,12 +91,12 @@ export default function StatsBar({ hotspots }) {
       value: medium,
       sub: "Review required",
       color: "#fb923c",
-      accent: "rgba(251,146,60,0.1)",
-      border: "rgba(251,146,60,0.2)",
+      accent: "rgba(251,146,60,0.08)",
+      border: "rgba(251,146,60,0.16)",
       icon: (
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -136,12 +113,12 @@ export default function StatsBar({ hotspots }) {
       value: low,
       sub: "Under monitoring",
       color: "#4ade80",
-      accent: "rgba(74,222,128,0.1)",
-      border: "rgba(74,222,128,0.18)",
+      accent: "rgba(74,222,128,0.08)",
+      border: "rgba(74,222,128,0.14)",
       icon: (
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -157,12 +134,12 @@ export default function StatsBar({ hotspots }) {
       value: persistent,
       sub: "Ongoing · Unresolved",
       color: "#c084fc",
-      accent: "rgba(192,132,252,0.1)",
-      border: "rgba(192,132,252,0.2)",
+      accent: "rgba(192,132,252,0.08)",
+      border: "rgba(192,132,252,0.16)",
       icon: (
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -174,32 +151,110 @@ export default function StatsBar({ hotspots }) {
     },
   ];
 
+  const totalFrp = processed.reduce((sum, h) => sum + h.frp, 0).toFixed(0);
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600;700&display=swap');
-        .stats-bar * { box-sizing: border-box; margin: 0; padding: 0; }
-        .stats-bar { display: flex; gap: 10px; padding: 10px 16px; background: #060d16; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'Inter', sans-serif; }
-        .stat-card { flex: 1; position: relative; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; transition: transform 0.18s ease; cursor: default; overflow: hidden; }
-        .stat-card:hover { transform: translateY(-2px); }
-        .stat-top { display: flex; align-items: center; justify-content: space-between; }
-        .stat-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .stat-badge { font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; padding: 3px 7px; border-radius: 20px; background: rgba(34,197,94,0.14); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
-        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
-        .stat-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.38); letter-spacing: 0.2px; margin-top: 2px; }
-        .stat-sub { font-size: 9px; font-weight: 500; letter-spacing: 0.2px; margin-top: 1px; opacity: 0.75; }
-        .divider-line { height: 1px; background: currentColor; opacity: 0.12; margin: 2px 0 2px; }
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(248,113,113,0.35); } 70% { box-shadow: 0 0 0 6px rgba(248,113,113,0); } 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); } }
-        .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #f87171; animation: pulse-ring 1.6s ease-out infinite; flex-shrink: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        .stats-bar {
+          display: flex;
+          align-items: stretch;
+          gap: 0;
+          padding: 0;
+          background: #0a1020;
+          border-bottom: 1px solid #1e2d3d;
+          font-family: 'Inter', sans-serif;
+        }
+
+        .stat-card {
+          flex: 1;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          cursor: default;
+          border-right: 1px solid #1e2d3d;
+          transition: background 0.15s;
+          position: relative;
+        }
+        .stat-card:last-child { border-right: none; }
+        .stat-card:hover { background: rgba(255,255,255,0.02); }
+
+        .stat-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .stat-icon {
+          width: 26px; height: 26px;
+          border-radius: 7px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .stat-value {
+          font-size: 26px;
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: -0.5px;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          font-weight: 500;
+          color: #6a8aaa;
+          margin-top: 2px;
+        }
+
+        .stat-sub {
+          font-size: 10px;
+          font-weight: 400;
+          color: #3a5570;
+          margin-top: 1px;
+        }
+
+        .stat-top-bar {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          opacity: 0.5;
+        }
+
+        @keyframes pulseRing {
+          0%   { box-shadow: 0 0 0 0 rgba(248,113,113,0.4); }
+          70%  { box-shadow: 0 0 0 5px rgba(248,113,113,0); }
+          100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+        }
+        .pulse-dot {
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: #f87171;
+          animation: pulseRing 1.6s ease-out infinite;
+          flex-shrink: 0;
+        }
+
+        .frp-pill {
+          font-size: 10px;
+          font-weight: 600;
+          color: #38bdf8;
+          background: rgba(56,189,248,0.1);
+          border: 1px solid rgba(56,189,248,0.18);
+          border-radius: 20px;
+          padding: 2px 8px;
+        }
       `}</style>
 
       <div className="stats-bar">
         {stats.map((s, i) => (
-          <div
-            key={i}
-            className="stat-card"
-            style={{ background: s.accent, border: `1px solid ${s.border}` }}
-          >
+          <div key={i} className="stat-card">
+            {/* Top color strip */}
+            <div className="stat-top-bar" style={{ background: s.color }} />
+
             <div className="stat-top">
               <div
                 className="stat-icon"
@@ -211,20 +266,17 @@ export default function StatsBar({ hotspots }) {
               >
                 {s.icon}
               </div>
-              {s.change && <span className="stat-badge">{s.change}</span>}
               {s.pulse && <div className="pulse-dot" />}
+              {/* Total FRP shown only on first card */}
+              {i === 0 && <span className="frp-pill">{totalFrp} MW</span>}
             </div>
+
             <div>
               <div className="stat-value" style={{ color: s.color }}>
                 <AnimatedValue target={s.value} />
               </div>
-              <div className="divider-line" style={{ color: s.color }} />
               <div className="stat-label">{s.label}</div>
-              {s.sub && (
-                <div className="stat-sub" style={{ color: s.color }}>
-                  {s.sub}
-                </div>
-              )}
+              {s.sub && <div className="stat-sub">{s.sub}</div>}
             </div>
           </div>
         ))}
